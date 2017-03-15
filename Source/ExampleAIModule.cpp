@@ -133,20 +133,11 @@ bool ExampleAIModule::createUnit(Unit building, UnitType unit)
 
 				Broodwar << lastErr << std::endl;
 
-				// Retrieve the supply provider type in the case that we have run out of supplies
-				UnitType supplyProviderType = u_commandCenter->getType().getRace().getSupplyProvider();
-
 				// If we are supply blocked
-				if (lastErr == Errors::Insufficient_Supply && Broodwar->self()->incompleteUnitCount(supplyProviderType) == 0)
+				if (lastErr == Errors::Insufficient_Supply && Broodwar->self()->incompleteUnitCount(UnitTypes::Zerg_Overlord) == 0)
 				{
-					// Retrieve a unit that is capable of constructing the supply needed
-					Unit supplyBuilder = u_commandCenter->getClosestUnit(GetType == supplyProviderType.whatBuilds().first && (IsIdle || IsGatheringMinerals) && IsOwned);
-
-					// If a unit was found
-					if (supplyBuilder)
-					{
-						createBuilding(supplyBuilder, UnitTypes::Zerg_Spawning_Pool);
-					}
+					Broodwar << "Go go supply" << std::endl;
+					u_commandCenter->train(UnitTypes::Zerg_Overlord);
 
 					return false;
 				} // closure: insufficient supply
@@ -210,8 +201,6 @@ void ExampleAIModule::checkStrategy() {
 	else
 	{
 		createUnit(u_commandCenter, UnitTypes::Zerg_Zergling);
-
-		
 	}
 }
 
@@ -307,7 +296,6 @@ void ExampleAIModule::onFrame()
 		else if (u->getType().isResourceDepot()) // A resource depot is a Command Center, Nexus, or Hatchery
 		{
 		}
-
 	} // closure: unit iterator
 }
 
