@@ -29,4 +29,9 @@ public:
   virtual void createBuilding(BWAPI::Unit worker, BWAPI::UnitType building);
   virtual bool createUnit(BWAPI::Unit building, BWAPI::UnitType unit);
   virtual void checkStrategy();
+
+  virtual void scout(BWAPI::Unit u);
+
+  // Unit behaviors
+  virtual void zerglingBehavior(BWAPI::Unit zergling);
 };
