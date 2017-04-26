@@ -282,10 +282,18 @@ void ExampleAIModule::onFrame()
 		}
 		else if (u->getType() == UnitTypes::Zerg_Overlord)
 		{
+			if (u->getUnitsInRadius(40, IsEnemy).size() > 0) {
+				Broodwar << "WE'VE FOUND THEM !" << std::endl;
+			}
+
 			if (!u->isMoving())
 			{
 				scout(u);
 			}
+		}
+		else if (u->getType() == UnitTypes::Zerg_Zergling)
+		{
+			zerglingBehavior(u);
 		}
 		else if (u->getType().isResourceDepot()) // A resource depot is a Command Center, Nexus, or Hatchery
 		{
@@ -293,10 +301,36 @@ void ExampleAIModule::onFrame()
 	} // closure: unit iterator
 }
 
+// 0 - bottom left
+// 1 - bottom right
+// 2 - top right
+// 3 - top left
+void ExampleAIModule::scoutMove(int direction, Unit u) {
+	switch (direction)
+	{
+		case 0:
+			// Go bottom left
+			u->move(Position(0, Broodwar->mapHeight() * 32));
+			break;
+		case 1:
+			// Go bottom right
+			u->move(Position(Broodwar->mapWidth() * 32, Broodwar->mapHeight() * 32));
+			break;
+		case 2:
+			// Go top right
+			u->move(Position(Broodwar->mapWidth() * 32, 0));
+			break;
+		case 3:
+			// Go top left
+			u->move(Position(0, 0));
+			break;
+	}
+}
+
 void ExampleAIModule::scout(Unit u)
 {
 	TilePosition start = Broodwar->self()->getStartLocation();
-
+	
 	if (!launchedScouts[0])
 	{
 		// Detect in which corner of the map we are
@@ -307,15 +341,13 @@ void ExampleAIModule::scout(Unit u)
 			if (start.y < Broodwar->mapHeight() / 2)
 			{
 				Broodwar << "Go bottom right" << std::endl;
-				// Go bottom right
-				u->move(Position(Broodwar->mapWidth() * 32, Broodwar->mapHeight() * 32));
+				scoutMove(1, u);
 			}
 			// Bottom left
 			else
 			{
 				Broodwar << "Go top right" << std::endl;
-				// Go top right
-				u->move(Position(Broodwar->mapWidth() * 32, 0));
+				scoutMove(2, u);
 			}
 		}
 		else
@@ -325,15 +357,13 @@ void ExampleAIModule::scout(Unit u)
 			if (start.y < Broodwar->mapHeight() / 2)
 			{
 				Broodwar << "Go bottom left" << std::endl;
-				// Go bottom left
-				u->move(Position(0, Broodwar->mapHeight() * 32));
+				scoutMove(0, u);
 			}
 			// Bottom right
 			else
 			{
 				Broodwar << "Go top left" << std::endl;
-				// Go top left
-				u->move(Position(0, 0));
+				scoutMove(3, u);
 			}
 		}
 
@@ -350,14 +380,14 @@ void ExampleAIModule::scout(Unit u)
 			// Top left
 			if (start.y < Broodwar->mapHeight() / 2)
 			{
-				// Go bottom right
-				u->move(Position((Broodwar->mapWidth() / 4) * 32, Broodwar->mapHeight() * 32));
+				// Go bottom left
+				scoutMove(0, u);
 			}
 			// Bottom left
 			else
 			{
-				// Go top right
-				u->move(Position(Broodwar->mapWidth() * 32, (3 * Broodwar->mapHeight() / 4) * 32));
+				// Go bottom right
+				scoutMove(1, u);
 			}
 		}
 		// Right side of the map
@@ -368,15 +398,13 @@ void ExampleAIModule::scout(Unit u)
 			if (start.y < Broodwar->mapHeight() / 2)
 			{
 				Broodwar << "Go bottom left" << std::endl;
-				// Go bottom left
-				u->move(Position(0, (Broodwar->mapHeight() / 4) * 32));
+				scoutMove(3, u);
 			}
 			// Bottom right
 			else
 			{
 				Broodwar << "Go top left" << std::endl;
-				// Go top left
-				u->move(Position((3 * Broodwar->mapWidth() / 4) * 32, 0));
+				scoutMove(2, u);
 			}
 		}
 
@@ -384,7 +412,7 @@ void ExampleAIModule::scout(Unit u)
 	} 
 	else if (launchedScouts[1] && !launchedScouts[2])
 	{
-		Broodwar << "Second scout !" << std::endl;
+		Broodwar << "Third scout !" << std::endl;
 		// Detect in which corner of the map we are
 		if (start.x < Broodwar->mapWidth() / 2)
 		{
@@ -392,14 +420,14 @@ void ExampleAIModule::scout(Unit u)
 			// Top left
 			if (start.y < Broodwar->mapHeight() / 2)
 			{
-				// Go bottom right
-				u->move(Position((Broodwar->mapWidth() / 4) * 32, (Broodwar->mapHeight() / 4) * 32));
+				// Top right
+				scoutMove(2, u);
 			}
 			// Bottom left
 			else
 			{
-				// Go top right
-				u->move(Position((Broodwar->mapWidth() / 4) * 32, 0));
+				// Top left
+				scoutMove(3, u);
 			}
 		}
 		else
@@ -408,16 +436,14 @@ void ExampleAIModule::scout(Unit u)
 			// Top right
 			if (start.y < Broodwar->mapHeight() / 2)
 			{
-				Broodwar << "Go bottom left" << std::endl;
-				// Go bottom left
-				u->move(Position(3 * (Broodwar->mapWidth() / 4) * 32, Broodwar->mapHeight() * 32));
+				// Bottom right
+				scoutMove(1, u);
 			}
 			// Bottom right
 			else
 			{
-				Broodwar << "Go top left" << std::endl;
-				// Go top left
-				u->move(Position(0,  (3 * (Broodwar->mapHeight() / 4)) * 32));
+				// Bottom left
+				scoutMove(0, u);
 			}
 		}
 
@@ -441,6 +467,10 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 			{
 				Broodwar << Broodwar->getLastError() << std::endl;
 			}
+		}
+
+		if (!u->isAttacking()) {
+			scout(u);
 		}
 	}
 }

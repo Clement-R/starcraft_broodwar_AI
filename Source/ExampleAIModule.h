@@ -31,6 +31,7 @@ public:
   virtual void checkStrategy();
 
   virtual void scout(BWAPI::Unit u);
+  virtual void scoutMove(int direction, BWAPI::Unit u);
 
   // Unit behaviors
   virtual void zerglingBehavior(BWAPI::Unit zergling);

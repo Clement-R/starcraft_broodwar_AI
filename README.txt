@@ -1,0 +1,5 @@
+- Scout dans toutes les directions (coins)
+- Scout dans chaque carré de la map (découpage en quadtree)
+- Scout avec des zerglings (3 pour couvrir la carte)
+- Propager information quand la base ennemie est trouvée
+- 
