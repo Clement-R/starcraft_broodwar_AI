@@ -326,10 +326,10 @@ void ExampleAIModule::scout(Unit u)
 			}
 		}
 
-		if (u->getUnitsInRadius(512, IsEnemy).size() > 0) {
+		if (u->getUnitsInRadius(2048, IsEnemy).size() > 0) {
 			Broodwar << "WE'VE FOUND THEM !" << std::endl;
 
-			for (Unit i : u->getUnitsInRadius(512, IsEnemy)) {
+			for (Unit i : u->getUnitsInRadius(2048, IsEnemy)) {
 				enemyBase = i->getPosition();
 				enemyFound = true;
 				Broodwar << enemyBase << std::endl;
@@ -341,6 +341,14 @@ void ExampleAIModule::scout(Unit u)
 
 void ExampleAIModule::zerglingBehavior(Unit u)
 {	
+	int zeCounter = 0;
+	for each (auto u in Broodwar->self()->getUnits())
+	{
+		if (u->getType() == UnitTypes::Zerg_Zergling) {
+			zeCounter++;
+		}
+	} 
+
 	if (u->isUnderAttack())
 	{
 		u->attack(u->getClosestUnit(IsEnemy));
@@ -349,10 +357,9 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 	if (!u->isMoving())
 	{
 		if (enemyFound) {
-			// u->attack(enemyBase);
-			Broodwar << enemyBase << std::endl;
-			u->move(enemyBase);
-			// Broodwar << Broodwar->getLastError() << std::endl;
+			if (zeCounter > 12) {
+				u->move(enemyBase);
+			}
 		}
 		else {
 			if (!u->isAttacking()) {
