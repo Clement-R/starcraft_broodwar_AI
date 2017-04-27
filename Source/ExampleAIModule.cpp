@@ -298,14 +298,6 @@ void ExampleAIModule::onFrame()
 		}
 		else if (u->getType() == UnitTypes::Zerg_Overlord)
 		{
-			if (u->getUnitsInRadius(256, IsEnemy && IsBuilding).size() > 0) {
-				Broodwar << "WE'VE FOUND THEM !" << std::endl;
-			}
-
-			if (!u->isMoving())
-			{
-				scout(u);
-			}
 		}
 		else if (u->getType() == UnitTypes::Zerg_Zergling)
 		{
@@ -334,12 +326,13 @@ void ExampleAIModule::scout(Unit u)
 			}
 		}
 
-		if (u->getUnitsInRadius(256, IsEnemy).size() > 0) {
+		if (u->getUnitsInRadius(512, IsEnemy).size() > 0) {
 			Broodwar << "WE'VE FOUND THEM !" << std::endl;
 
-			for (Unit i : u->getUnitsInRadius(256, IsEnemy && IsBuilding)) {
+			for (Unit i : u->getUnitsInRadius(512, IsEnemy)) {
 				enemyBase = i->getPosition();
 				enemyFound = true;
+				Broodwar << enemyBase << std::endl;
 				break;
 			}
 		}
@@ -348,13 +341,18 @@ void ExampleAIModule::scout(Unit u)
 
 void ExampleAIModule::zerglingBehavior(Unit u)
 {	
+	if (u->isUnderAttack())
+	{
+		u->attack(u->getClosestUnit(IsEnemy));
+	}
+
 	if (!u->isMoving())
 	{
 		if (enemyFound) {
 			// u->attack(enemyBase);
 			Broodwar << enemyBase << std::endl;
 			u->move(enemyBase);
-			Broodwar << Broodwar->getLastError() << std::endl;
+			// Broodwar << Broodwar->getLastError() << std::endl;
 		}
 		else {
 			if (!u->isAttacking()) {
@@ -365,20 +363,41 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 	else
 	{
 		if (enemyFound) {
-			// u->attack(enemyBase);
-			Broodwar << enemyBase << std::endl;
 			u->move(enemyBase);
-			Broodwar << Broodwar->getLastError() << std::endl;
 		}
 	}
 
-	// Attack workers if not scouting
-	for (auto &a : u->getUnitsInRadius(256, IsEnemy && IsAttacking))
+	// Attack workers
+	for (auto &a : u->getUnitsInRadius(256, IsEnemy && IsWorker))
 	{
 		if (u->canAttackUnit(a))
 		{
 			u->attack(a);
 			Broodwar << Broodwar->getLastError() << std::endl;
+		}
+	}
+
+	// Attack units
+	if (!u->isAttacking()) {
+		for (auto &a : u->getUnitsInRadius(256, IsEnemy && !IsBuilding))
+		{
+			if (u->canAttackUnit(a))
+			{
+				u->attack(a);
+				Broodwar << Broodwar->getLastError() << std::endl;
+			}
+		}
+	}
+
+	// Attack buildings
+	if (!u->isAttacking()) {
+		for (auto &a : u->getUnitsInRadius(256, IsEnemy && IsBuilding))
+		{
+			if (u->canAttackUnit(a))
+			{
+				u->attack(a);
+				Broodwar << Broodwar->getLastError() << std::endl;
+			}
 		}
 	}
 }
