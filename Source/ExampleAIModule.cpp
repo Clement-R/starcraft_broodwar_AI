@@ -311,7 +311,7 @@ void ExampleAIModule::onFrame()
 
 void ExampleAIModule::scout(Unit u)
 {
-	if (launchedScouts.size() < 6) {
+	if (launchedScouts.size() != scoutingPoints.size()) {
 		launchedScouts.push_back(u);
 	}
 
@@ -341,6 +341,7 @@ void ExampleAIModule::scout(Unit u)
 
 void ExampleAIModule::zerglingBehavior(Unit u)
 {	
+	// Count how many zerglings we owned
 	int zeCounter = 0;
 	for each (auto u in Broodwar->self()->getUnits())
 	{
@@ -349,15 +350,19 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 		}
 	} 
 
+	// Strike back
 	if (u->isUnderAttack())
 	{
 		u->attack(u->getClosestUnit(IsEnemy));
 	}
 
+	// If the zergling is not moving and that we've not found the enemy we scout else if we've enough zerglings we go to the enemy base
+	// If the zergling is moving (scouting) and that we've found the enemy, we rush him if we've enough zerglings
 	if (!u->isMoving())
 	{
 		if (enemyFound) {
 			if (zeCounter > 12) {
+				Broodwar->setLocalSpeed(30);
 				u->move(enemyBase);
 			}
 		}
@@ -370,12 +375,15 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 	else
 	{
 		if (enemyFound) {
-			u->move(enemyBase);
+			if (zeCounter > 12) {
+				Broodwar->setLocalSpeed(30);
+				u->move(enemyBase);
+			}
 		}
 	}
 
 	// Attack workers
-	for (auto &a : u->getUnitsInRadius(256, IsEnemy && IsWorker))
+	for (auto &a : u->getUnitsInRadius(512, IsEnemy && IsWorker))
 	{
 		if (u->canAttackUnit(a))
 		{
@@ -386,7 +394,7 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 
 	// Attack units
 	if (!u->isAttacking()) {
-		for (auto &a : u->getUnitsInRadius(256, IsEnemy && !IsBuilding))
+		for (auto &a : u->getUnitsInRadius(512, IsEnemy && !IsBuilding))
 		{
 			if (u->canAttackUnit(a))
 			{
@@ -398,7 +406,7 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 
 	// Attack buildings
 	if (!u->isAttacking()) {
-		for (auto &a : u->getUnitsInRadius(256, IsEnemy && IsBuilding))
+		for (auto &a : u->getUnitsInRadius(512, IsEnemy && IsBuilding))
 		{
 			if (u->canAttackUnit(a))
 			{
