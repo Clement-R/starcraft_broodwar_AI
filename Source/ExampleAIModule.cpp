@@ -1,5 +1,7 @@
 #include "ExampleAIModule.h"
 #include <iostream>
+#include <vector>
+#include <algorithm>
 
 using namespace BWAPI;
 using namespace Filter;
@@ -9,6 +11,8 @@ bool firstPool = false;
 bool firstDrone = false;
 bool buildingConstructed = false;
 
+Unit enemyBase = NULL;
+
 Unit u_commandCenter = nullptr;
 
 Unit u_builder = nullptr;
@@ -17,7 +21,10 @@ Unit u_firstExtractor = nullptr;
 Unit u_firstPool = nullptr;
 
 // diagonal, diagonal-top, diagonal-bot
-bool launchedScouts[] = {false, false, false};
+std::vector<Unit> launchedScouts;
+
+// All points that need to be scouted
+std::vector<TilePosition> scoutingPoints;
 
 void ExampleAIModule::onStart()
 {
@@ -63,7 +70,7 @@ void ExampleAIModule::onStart()
 	// Set speed to the highest
 	Broodwar->setLocalSpeed(0);
 
-	// Search our hatchery to later use
+	// Search our hatchery for later use
 	for (auto &u : Broodwar->self()->getUnits())
 	{
 		if (u->getType().isResourceDepot())
@@ -71,6 +78,18 @@ void ExampleAIModule::onStart()
 			u_commandCenter = u;
 		}
 	}
+
+	// Given our starting position we search all the positions that we want to scout, ordered by priority
+	TilePosition start = Broodwar->self()->getStartLocation();
+
+	for each (auto pos in Broodwar->getStartLocations())
+	{	
+		if (pos != start) {
+			scoutingPoints.push_back(pos);
+		}
+	}
+
+	Broodwar << "There are : " << scoutingPoints.size() << " starting points" << std::endl;
 }
 
 void ExampleAIModule::onEnd(bool isWinner)
@@ -134,14 +153,10 @@ bool ExampleAIModule::createUnit(Unit building, UnitType unit)
 			if (!building->train(unit)) {
 				Error lastErr = Broodwar->getLastError();
 
-				Broodwar << lastErr << std::endl;
-
 				// If we are supply blocked
 				if (lastErr == Errors::Insufficient_Supply && Broodwar->self()->incompleteUnitCount(UnitTypes::Zerg_Overlord) == 0)
 				{
-					Broodwar << "Go go supply" << std::endl;
 					u_commandCenter->train(UnitTypes::Zerg_Overlord);
-
 					return false;
 				} // closure: insufficient supply
 			}
@@ -200,7 +215,7 @@ void ExampleAIModule::checkStrategy() {
 			firstDrone = true;
 		}
 	}
-	// YOLO zerg
+	// YOLO zerg until the end
 	else
 	{
 		createUnit(u_commandCenter, UnitTypes::Zerg_Zergling);
@@ -282,7 +297,7 @@ void ExampleAIModule::onFrame()
 		}
 		else if (u->getType() == UnitTypes::Zerg_Overlord)
 		{
-			if (u->getUnitsInRadius(40, IsEnemy).size() > 0) {
+			if (u->getUnitsInRadius(180, IsEnemy && IsBuilding).size() > 0) {
 				Broodwar << "WE'VE FOUND THEM !" << std::endl;
 			}
 
@@ -301,166 +316,31 @@ void ExampleAIModule::onFrame()
 	} // closure: unit iterator
 }
 
-// 0 - bottom left
-// 1 - bottom right
-// 2 - top right
-// 3 - top left
-void ExampleAIModule::scoutMove(int direction, Unit u) {
-	switch (direction)
-	{
-		case 0:
-			// Go bottom left
-			u->move(Position(0, Broodwar->mapHeight() * 32));
-			break;
-		case 1:
-			// Go bottom right
-			u->move(Position(Broodwar->mapWidth() * 32, Broodwar->mapHeight() * 32));
-			break;
-		case 2:
-			// Go top right
-			u->move(Position(Broodwar->mapWidth() * 32, 0));
-			break;
-		case 3:
-			// Go top left
-			u->move(Position(0, 0));
-			break;
-	}
-}
-
 void ExampleAIModule::scout(Unit u)
 {
-	TilePosition start = Broodwar->self()->getStartLocation();
-	
-	if (!launchedScouts[0])
-	{
-		// Detect in which corner of the map we are
-		if (start.x < Broodwar->mapWidth() / 2)
-		{
-			// Go in diagonal
-			// Top left
-			if (start.y < Broodwar->mapHeight() / 2)
-			{
-				Broodwar << "Go bottom right" << std::endl;
-				scoutMove(1, u);
-			}
-			// Bottom left
-			else
-			{
-				Broodwar << "Go top right" << std::endl;
-				scoutMove(2, u);
-			}
-		}
-		else
-		{
-			// Go in diagonal
-			// Top right
-			if (start.y < Broodwar->mapHeight() / 2)
-			{
-				Broodwar << "Go bottom left" << std::endl;
-				scoutMove(0, u);
-			}
-			// Bottom right
-			else
-			{
-				Broodwar << "Go top left" << std::endl;
-				scoutMove(3, u);
-			}
-		}
-
-		launchedScouts[0] = true;
+	if (launchedScouts.size() < 6) {
+		launchedScouts.push_back(u);
 	}
-	else if (launchedScouts[0] && !launchedScouts[1])
-	{
-		Broodwar << "Second scout !" << std::endl;
-		// Detect in which corner of the map we are
-		// Left side of the map
-		if (start.x < Broodwar->mapWidth() / 2)
-		{
-			// Go in diagonal
-			// Top left
-			if (start.y < Broodwar->mapHeight() / 2)
-			{
-				// Go bottom left
-				scoutMove(0, u);
-			}
-			// Bottom left
-			else
-			{
-				// Go bottom right
-				scoutMove(1, u);
-			}
-		}
-		// Right side of the map
-		else
-		{
-			// Go in diagonal
-			// Top right
-			if (start.y < Broodwar->mapHeight() / 2)
-			{
-				Broodwar << "Go bottom left" << std::endl;
-				scoutMove(3, u);
-			}
-			// Bottom right
-			else
-			{
-				Broodwar << "Go top left" << std::endl;
-				scoutMove(2, u);
-			}
-		}
 
-		launchedScouts[1] = true;
-	} 
-	else if (launchedScouts[1] && !launchedScouts[2])
-	{
-		Broodwar << "Third scout !" << std::endl;
-		// Detect in which corner of the map we are
-		if (start.x < Broodwar->mapWidth() / 2)
-		{
-			// Go in diagonal
-			// Top left
-			if (start.y < Broodwar->mapHeight() / 2)
-			{
-				// Top right
-				scoutMove(2, u);
-			}
-			// Bottom left
-			else
-			{
-				// Top left
-				scoutMove(3, u);
-			}
-		}
-		else
-		{
-			// Go in diagonal
-			// Top right
-			if (start.y < Broodwar->mapHeight() / 2)
-			{
-				// Bottom right
-				scoutMove(1, u);
-			}
-			// Bottom right
-			else
-			{
-				// Bottom left
-				scoutMove(0, u);
-			}
-		}
+	if (std::find(launchedScouts.begin(), launchedScouts.end(), u) != launchedScouts.end()) {
+		if (!u->isMoving()) {
+			if (scoutingPoints.size() > 0) {
+				TilePosition pos = scoutingPoints.back();
+				u->move(Position(pos.x * 32, pos.y * 32));
+				scoutingPoints.pop_back();
 
-		launchedScouts[2] = true;
+				Broodwar << "There are : " << scoutingPoints.size() << " starting points left" << std::endl;
+			}
+		}
 	}
-	
-	// Go on mid-x  0-y
-	// Go on full-x mid-y
 }
 
 void ExampleAIModule::zerglingBehavior(Unit u)
 {	
-	// Attack if not scouting
-	// TODO : Scout in a better way with a class and a flag
 	if (!u->isMoving())
 	{
-		for (auto &a : u->getUnitsInRadius(20, IsWorker && !IsOwned))
+		// Attack if not scouting
+		for (auto &a : u->getUnitsInRadius(180, IsEnemy))
 		{
 			// Attack da worker
 			if (u->canAttackUnit(a))
@@ -471,6 +351,19 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 
 		if (!u->isAttacking()) {
 			scout(u);
+		}
+
+		if (u->getUnitsInRadius(180, IsEnemy).size() > 0) {
+			Broodwar << "WE'VE FOUND THEM !" << std::endl;
+			
+			for (Unit i : u->getUnitsInRadius(40, IsEnemy && IsBuilding)) {
+				enemyBase = i;
+				break;
+			}
+		}
+
+		if (enemyBase != NULL) {
+			u->attack(enemyBase);
 		}
 	}
 }
