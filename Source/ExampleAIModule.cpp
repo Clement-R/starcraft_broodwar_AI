@@ -13,6 +13,7 @@ bool buildingConstructed = false;
 bool enemyFound = false;
 
 Position enemyBase = Position();
+Position rallyPoint = Position();
 
 Unit u_commandCenter = nullptr;
 
@@ -89,8 +90,6 @@ void ExampleAIModule::onStart()
 			scoutingPoints.push_back(pos);
 		}
 	}
-
-	Broodwar << "There are : " << scoutingPoints.size() << " starting points" << std::endl;
 }
 
 void ExampleAIModule::onEnd(bool isWinner)
@@ -216,10 +215,24 @@ void ExampleAIModule::checkStrategy() {
 			firstDrone = true;
 		}
 	}
-	// YOLO zerg until the end
 	else
 	{
-		createUnit(u_commandCenter, UnitTypes::Zerg_Zergling);
+		// If some workers died we replace them
+		int workerCounter = 0;
+		for each (auto u in Broodwar->self()->getUnits())
+		{
+			if (u->getType() == UnitTypes::Zerg_Drone) {
+				workerCounter++;
+			}
+		}
+
+		if (workerCounter < 5) {
+			createUnit(u_commandCenter, UnitTypes::Zerg_Drone);
+		}
+		// YOLO ZERG
+		else {
+			createUnit(u_commandCenter, UnitTypes::Zerg_Zergling);
+		}
 	}
 }
 
@@ -321,18 +334,13 @@ void ExampleAIModule::scout(Unit u)
 				TilePosition pos = scoutingPoints.back();
 				u->move(Position(pos.x * 32, pos.y * 32));
 				scoutingPoints.pop_back();
-
-				Broodwar << "There are : " << scoutingPoints.size() << " starting points left" << std::endl;
 			}
 		}
 
-		if (u->getUnitsInRadius(2048, IsEnemy).size() > 0) {
-			Broodwar << "WE'VE FOUND THEM !" << std::endl;
-
-			for (Unit i : u->getUnitsInRadius(2048, IsEnemy)) {
+		if (u->getUnitsInRadius(4096, IsEnemy && IsBuilding).size() > 0) {
+			for (Unit i : u->getUnitsInRadius(4096, IsEnemy && IsBuilding)) {
 				enemyBase = i->getPosition();
 				enemyFound = true;
-				Broodwar << enemyBase << std::endl;
 				break;
 			}
 		}
@@ -357,12 +365,11 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 	}
 
 	// If the zergling is not moving and that we've not found the enemy we scout else if we've enough zerglings we go to the enemy base
-	// If the zergling is moving (scouting) and that we've found the enemy, we rush him if we've enough zerglings
+	// Else the zergling is moving (scouting) and we've found the enemy, we rush him if we've enough zerglings
 	if (!u->isMoving())
 	{
 		if (enemyFound) {
 			if (zeCounter > 12) {
-				Broodwar->setLocalSpeed(30);
 				u->move(enemyBase);
 			}
 		}
@@ -374,9 +381,15 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 	}
 	else
 	{
+		if (u->getUnitsInRadius(128, IsEnemy).size() > 0) {
+			for (Unit i : u->getUnitsInRadius(128, IsEnemy)) {
+				u->attack(i);
+				break;
+			}
+		}
+
 		if (enemyFound) {
 			if (zeCounter > 12) {
-				Broodwar->setLocalSpeed(30);
 				u->move(enemyBase);
 			}
 		}
@@ -388,7 +401,6 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 		if (u->canAttackUnit(a))
 		{
 			u->attack(a);
-			Broodwar << Broodwar->getLastError() << std::endl;
 		}
 	}
 
@@ -399,7 +411,6 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 			if (u->canAttackUnit(a))
 			{
 				u->attack(a);
-				Broodwar << Broodwar->getLastError() << std::endl;
 			}
 		}
 	}
@@ -411,7 +422,6 @@ void ExampleAIModule::zerglingBehavior(Unit u)
 			if (u->canAttackUnit(a))
 			{
 				u->attack(a);
-				Broodwar << Broodwar->getLastError() << std::endl;
 			}
 		}
 	}
